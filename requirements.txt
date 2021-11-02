@@ -3,3 +3,4 @@
 pytest
 slack_bolt
 pdbpp
+fastapi
