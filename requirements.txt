@@ -1,6 +1,10 @@
 --index-url https://pypi.org/simple
 
-pytest
-slack_bolt
+fastapi==0.95.0
+uvicorn==0.21.1
+
+# Local development
+
+pytest==6.2.4
+slack-bolt==1.8.1
 pdbpp
-fastapi

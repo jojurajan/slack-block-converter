@@ -1,6 +1,9 @@
 
 class SlackBlockParser:
-    non_changing_keys = ["action_id", "block_id", "value", "url", "image_url", "alt_text", "initial_date"]
+    non_changing_keys = [
+        "action_id", "block_id", "value", "url", "image_url", "alt_text",
+        "initial_date", "initial_time", "initial_conversation", "initial_user",
+        "initial_channel"]
 
     def parse(self, data):
         if isinstance(data, list):
@@ -57,7 +60,8 @@ class SlackBlockParser:
             "plain_text_input": "PlainTextInputElement",
             "radio_buttons": "RadioButtonsElement",
             "overflow": "OverflowMenuElement",
-            "option": "Option"
+            "option": "Option",
+            "filter": "ConversationFilter"
         }
         try:
             return mapper[block_type]
@@ -126,51 +130,45 @@ class SlackBlockParser:
     def _parse_placeholder(self, data):
         return self._parse_text(data)
 
-    def convert(self, data):
-        if isinstance(data, list):
-            return_data = []
-            for item in data:
-                return_data.append(self._convert_block(item))
-            return return_data
-        else:
-            return self._convert_block(data)
+    def _parse_description(self, data):
+        return self._parse_text(data)
 
-    def _convert_block(self, data):
-        if "class" in data:
-            return self._convert_class(data)
-        return ""
+    def _parse_title(self, data):
+        return self._parse_text(data)
 
-    def _convert_args(self, args):
-        return_value = ""
-        for key, value in args.items():
-            print(key, value)
-            if isinstance(value, str):
-                if return_value:
-                    return_value += ", "
-                return_value += f'{key}="{value}"'
-            elif isinstance(value, bool):
-                if return_value:
-                    return_value += ", "
-                return_value += f'{key}={value}'
-            elif isinstance(value, dict):
-                if return_value:
-                    return_value += ", "
-                return_value += f"{key}={self._convert_class(value)}"
-            elif isinstance(value, list):
-                if return_value:
-                    return_value += ", "
-                list_value = ''
-                for item in value:
-                    if list_value:
-                        list_value += ", "
-                    list_value += f"{self._convert_class(item)}"
-                return_value += f"{key}=[{list_value}]"
-        return return_value
+    def _parse_elements(self, data):
+        return_data = []
+        for item in data:
+            block_type = self._get_type(item)
+            if block_type in ["plain_text", "mrkdwn"]:
+                return_data.append(self._parse_text(item))
+            else:
+                return_data.append(self.parse(item))
+        return return_data
 
-    def _convert_class(self, data):
-        class_name = data["class"]
-        args = ""
-        if "args" in data:
-            args = self._convert_args(data["args"])
+    def _parse_filter(self, data):
+        return_data = {
+            "class": self._get_class("filter"),
+            "args": {}
+        }
+        for key, value in data.items():
+            if key in ["value", "include"]:
+                return_data["args"][key] = value
+                continue
+            return_data["args"][key] = getattr(self, f"_parse_{key}")(value)
+        return return_data
 
-        return f"{class_name}({args})"
+    def _parse_dispatch_action(self, data):
+        return bool(data)
+
+    def _parse_element(self, data):
+        return_data = {
+            "class": self._get_class(data.pop("type"))
+        }
+        return_data.update({
+            "args": data
+        })
+        return return_data
+
+    def _parse_label(self, data):
+        return self._parse_text(data)

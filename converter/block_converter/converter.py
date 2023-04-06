@@ -43,7 +43,12 @@ class SlackBlockConverter:
                 for item in value:
                     if list_value:
                         list_value += ", "
-                    list_value += f"{cls._convert_class(item)}"
+                    if isinstance(item, dict):
+                        list_value += f"{cls._convert_class(item)}"
+                    elif isinstance(item, str):
+                        list_value += f'"{item}"'
+                    else:
+                        list_value += str(item)
                 return_value += f"{key}=[{list_value}]"
         return return_value
 
